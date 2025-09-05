@@ -1,4 +1,4 @@
-package com.example.server.models
+package com.example.univents.server.models
 
 import kotlinx.serialization.Serializable
 

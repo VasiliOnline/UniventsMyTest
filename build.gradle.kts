@@ -1,4 +1,4 @@
-
+import org.gradle.kotlin.dsl.version
 
 // build.gradle.kts (корень проекта)
 plugins {
@@ -15,6 +15,6 @@ repositories {
 allprojects {
     // если используешь Kotlin в подсборках
     plugins.withId("org.jetbrains.kotlin.jvm") {
-        the<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>().jvmToolchain(17)
+        the<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>().jvmToolchain(21)
     }
 }
