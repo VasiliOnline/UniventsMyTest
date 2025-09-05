@@ -1,35 +1,34 @@
-package com.example.univents.server
+package com.example.server
 
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import com.example.univents.server.plugins.*
-import com.example.univents.server.repository.DatabaseFactory
-import com.typesafe.config.ConfigFactory
-import io.ktor.server.application.call
-import io.ktor.server.config.HoconApplicationConfig
-
-
-import io.ktor.server.routing.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
 
+fun main() = EngineMain.main(emptyArray())
 
-// 📌 Основная точка входа
-fun main() {
-    // Загружаем конфигурацию
-    val config = HoconApplicationConfig(ConfigFactory.load())
-
-
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
-
-        routing {
-            get("/") {
-                call.respondText("Hello, Univents!")
+fun Application.module() {
+    install(ContentNegotiation) { json() }
+    install(Authentication) {
+        jwt {
+            val secret = System.getenv("JWT_SECRET") ?: "dev"
+            verifier(Jwt.makeVerifier(secret))
+            validate { cred ->
+                val email = cred.payload.getClaim("email").asString()
+                if (!email.isNullOrBlank()) JWTPrincipal(cred.payload) else null
             }
         }
-        DatabaseFactory.init()         // подключаем базу данных
-        configureSerialization()       // JSON сериализация
-        configureSecurity()            // JWT-аутентификация
-        configureRouting()             // роуты
-    }.start(wait = true)
+    }
+    configureDb()
+    routing {
+        get("/healthz") { call.respondText("OK") }
+        authRoutes()
+        userRoutes()
+        eventRoutes()
+    }
 }
-
