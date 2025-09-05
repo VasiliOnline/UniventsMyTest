@@ -6,10 +6,9 @@ import com.auth0.jwt.algorithms.Algorithm
 import java.util.*
 
 object JwtConfig {
-
-    private const val secret = "super_secret_jwt_key"  // лучше из env
+    private val secret = System.getenv("JWT_SECRET") ?: "dev_super_secret_change_me"
     private const val issuer = "univents-server"
-    private const val validityInMs = 36_000_00 * 24   // 24 часа
+    private const val validityInMs = 86_400_000 // 24h
     private val algorithm = Algorithm.HMAC512(secret)
 
     fun makeToken(email: String): String = JWT.create()
@@ -23,4 +22,3 @@ object JwtConfig {
         .withIssuer(issuer)
         .build()
 }
-

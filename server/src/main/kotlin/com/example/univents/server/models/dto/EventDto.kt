@@ -3,14 +3,13 @@ package com.example.univents.server.models
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class UpdateEventRequest(
+data class EventDto(
     val id: Int,
     val title: String,
     val description: String,
-    val date: String
-)
-
-@Serializable
-data class DeleteEventRequest(
-    val id: Int
+    /** ISO-8601, e.g. 2025-09-04T10:30:00 */
+    val date: String,
+    val latitude: Double,
+    val longitude: Double,
+    val creatorEmail: String
 )

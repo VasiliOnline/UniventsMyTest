@@ -1,92 +1,91 @@
 package com.example.univents.server.routes
 
+import com.example.univents.server.models.*
 import com.example.univents.server.repository.EventRepository
-import com.example.univents.server.models.UpdateEventRequest
-import com.example.univents.server.models.DeleteEventRequest
+import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-data class CreateEventRequest(
-    val title: String,
-    val description: String,
-    val date: String
-)
+fun Route.eventRoutes(repo: EventRepository = EventRepository()) {
 
-@Suppress("SuspiciousIndentation")
-fun Route.eventRoutes() {
+    route("/events") {
 
-    val repo = EventRepository()
+        get {
+            val north = call.request.queryParameters["north"]?.toDoubleOrNull()
+            val south = call.request.queryParameters["south"]?.toDoubleOrNull()
+            val east = call.request.queryParameters["east"]?.toDoubleOrNull()
+            val west = call.request.queryParameters["west"]?.toDoubleOrNull()
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 200
+            val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+
+            val events = repo.getAllEvents(north, south, east, west, limit, offset)
+            call.respond(events)
+        }
+
+        get("/{id}") {
+            val id = call.parameters["id"]?.toIntOrNull()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("BAD_ID", "Неверный id"))
+            val event = repo.getById(id)
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("NOT_FOUND", "Событие не найдено"))
+            call.respond(event)
+        }
 
         authenticate("auth-jwt") {
 
-            post("/events/create") {
+            post {
                 val principal = call.principal<JWTPrincipal>()
                 val email = principal?.getClaim("email", String::class)
-                if (email == null) {
-                    call.respond(mapOf("status" to "error", "message" to "Нет email в токене"))
-                    return@post
-                }
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("NO_EMAIL", "Нет email в токене"))
 
                 val request = call.receive<CreateEventRequest>()
-                val eventId = repo.createEvent(request.title, request.description, request.date, email)
-                call.respond(mapOf(
-                    "status" to "ok",
-                    "eventId" to eventId
-                ))
+                val id = repo.createEvent(
+                    title = request.title,
+                    description = request.description,
+                    dateIso = request.date,
+                    latitude = request.latitude,
+                    longitude = request.longitude,
+                    creatorEmail = email
+                )
+                val created = repo.getById(id)!!
+                call.respond(HttpStatusCode.Created, created)
             }
 
-            get("/events/mine") {
+            put("/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, ErrorResponse("BAD_ID", "Неверный id"))
                 val principal = call.principal<JWTPrincipal>()
                 val email = principal?.getClaim("email", String::class)
-                if (email == null) {
-                    call.respond(mapOf("status" to "error", "message" to "Нет email в токене"))
-                    return@get
-                }
+                    ?: return@put call.respond(HttpStatusCode.Unauthorized, ErrorResponse("NO_EMAIL", "Нет email в токене"))
 
-                val events = repo.getEventsByUser(email)
-                call.respond(events)
-            }
-            // Редактирование события
-            put("/events/update") {
-                val principal = call.principal<JWTPrincipal>()
-                val email = principal?.getClaim("email", String::class) ?: return@put call.respond(
-                    mapOf("status" to "error", "message" to "Нет email в токене")
+                val request = call.receive<UpdateEventRequest>()
+                val ok = repo.updateEvent(
+                    id = id,
+                    requesterEmail = email,
+                    title = request.title,
+                    description = request.description,
+                    dateIso = request.date,
+                    latitude = request.latitude,
+                    longitude = request.longitude
                 )
-
-                val request: UpdateEventRequest = call.receive()
-                val success = repo.updateEvent(request.id, email, request.title, request.description, request.date)
-                if (success) {
-                    call.respond(mapOf("status" to "ok", "message" to "Событие обновлено"))
-                } else {
-                    call.respond(mapOf("status" to "error", "message" to "Событие не найдено или доступ запрещен"))
-                }
+                if (ok) call.respond(HttpStatusCode.OK)
+                else call.respond(HttpStatusCode.Forbidden, ErrorResponse("FORBIDDEN_OR_MISSING", "Не найдено или нет прав"))
             }
 
-            // Удаление события
-            delete("/events/delete") {
+            delete("/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse("BAD_ID", "Неверный id"))
                 val principal = call.principal<JWTPrincipal>()
-                val email = principal?.getClaim("email", String::class) ?: return@delete call.respond(
-                    mapOf("status" to "error", "message" to "Нет email в токене")
-                )
+                val email = principal?.getClaim("email", String::class)
+                    ?: return@delete call.respond(HttpStatusCode.Unauthorized, ErrorResponse("NO_EMAIL", "Нет email в токене"))
 
-                val request: DeleteEventRequest = call.receive()
-                val success = repo.deleteEvent(request.id, email)
-                if (success) {
-                    call.respond(mapOf("status" to "ok", "message" to "Событие удалено"))
-                } else {
-                    call.respond(mapOf("status" to "error", "message" to "Событие не найдено или доступ запрещен"))
-                }
+                val ok = repo.deleteEvent(id, email)
+                if (ok) call.respond(HttpStatusCode.NoContent)
+                else call.respond(HttpStatusCode.Forbidden, ErrorResponse("FORBIDDEN_OR_MISSING", "Не найдено или нет прав"))
             }
         }
-
-
-        // Доступно всем, даже без токена
-        get("/events") {
-            val events = repo.getAllEvents()
-            call.respond(events)
-        }
+    }
 }

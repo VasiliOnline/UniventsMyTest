@@ -12,3 +12,9 @@ repositories {
     google()
     mavenCentral()
 }
+allprojects {
+    // если используешь Kotlin в подсборках
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        the<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension>().jvmToolchain(17)
+    }
+}

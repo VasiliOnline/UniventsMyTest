@@ -30,15 +30,20 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.current()
-        targetCompatibility = JavaVersion.current()
+        //sourceCompatibility = JavaVersion.current()
+        //targetCompatibility = JavaVersion.current()
+            // OR
+           // compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+                    //}
     }
 
-    //kotlinOptions {
-    //    jvmTarget = "21"
-    //}
-    kotlin{
-            jvmToolchain(21)
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+    kotlin {
+        jvmToolchain(17)
     }
     packaging {
         resources {
