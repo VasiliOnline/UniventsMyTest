@@ -1,51 +1,55 @@
-
-
-// Kotlin/JVM + Ktor + Flyway + jOOQ
 plugins {
-    id("io.ktor.plugin") version "2.3.12"
-    id("org.flywaydb.flyway") version "11.12.0"
-    id("nu.studer.jooq") version "10.1.1"
-
-}
-
-repositories {
-    mavenCentral()
-    google() // сам добавил
+    kotlin("jvm")
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.flyway)
+    alias(libs.plugins.jooq.plugin)
 }
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 
+// Отдельная конфигурация для classpath задач Flyway
+val flywayMigration by configurations.creating
+
 dependencies {
+    // --- runtime сервера ---
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
+    implementation(libs.hikari)
+    implementation(libs.flyway.core)          // ок иметь и в runtime
+    implementation(libs.jooq)
+    implementation(libs.jbcrypt)
+    implementation(libs.postgresql)           // JDBC-драйвер для рантайма
 
-    implementation("io.ktor:ktor-server-core-jvm:2.3.12")
-    implementation("io.ktor:ktor-server-netty-jvm:2.3.12")
-    implementation("io.ktor:ktor-server-auth-jwt-jvm:2.3.12")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:2.3.12")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:2.3.12")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    // jOOQ codegen видит драйвер
+    jooqGenerator(libs.postgresql)
 
-    implementation("org.flywaydb:flyway-core:10.16.0")
-    implementation("org.postgresql:postgresql:42.7.3")
-    implementation("com.zaxxer:HikariCP:5.1.0")
+    // >>> classpath для flyway задач: драйвер + модуль БД <<<
+    add(flywayMigration.name, libs.postgresql.get().toString())
+    add(flywayMigration.name, "org.flywaydb:flyway-database-postgresql:${libs.versions.flyway.get()}")
+}
 
-    implementation("org.jooq:jooq:3.20.6")
-    implementation("org.mindrot:jbcrypt:0.4")
+flyway {
+    // только наша конфигурация, без compileClasspath
+    configurations = arrayOf(flywayMigration.name)
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test:2.0.21")
-
-
+    url = System.getenv("DB_URL") ?: "jdbc:postgresql://127.0.0.1:5432/univents"
+    user = System.getenv("DB_USER") ?: "postgres"
+    password = System.getenv("DB_PASSWORD") ?: "postgres"
 }
 
 jooq {
-    version.set("3.19.9")
+    version.set(libs.versions.jooq.get()) // 3.19.9
     configurations {
         create("main") {
             jooqConfiguration.apply {
                 logging = org.jooq.meta.jaxb.Logging.WARN
                 jdbc.apply {
                     driver = "org.postgresql.Driver"
-                    url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/univents"
+                    url = System.getenv("DB_URL") ?: "jdbc:postgresql://127.0.0.1:5432/univents"
                     user = System.getenv("DB_USER") ?: "postgres"
                     password = System.getenv("DB_PASSWORD") ?: "postgres"
                 }
@@ -56,10 +60,10 @@ jooq {
                         inputSchema = "public"
                     }
                     generate.apply {
+                        isFluentSetters = true
                         isDaos = false
                         isPojos = false
                         isImmutablePojos = false
-                        isFluentSetters = true
                     }
                     target.apply {
                         packageName = "com.example.univents.jooq"

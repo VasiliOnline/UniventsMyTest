@@ -1,5 +1,6 @@
 package com.example.univents.core.network
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences.preferencesKey
@@ -36,10 +37,14 @@ class AuthInterceptor(val tokenProvider: () -> String?) : Interceptor {
     }
 }
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable data class AuthRequest(val email: String, val password: String)
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable data class AuthResponse(val token: String)
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable data class MeDto(val email: String, val displayName: String? = null)
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class EventItem(
     val id: Long,

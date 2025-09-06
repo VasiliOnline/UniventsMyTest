@@ -2,22 +2,23 @@ package com.example.univents.server
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.flywaydb.core.Flyway
-import io.ktor.server.application.*
-import org.flywaydb.core.internal.database.base.Database
+import org.jooq.DSLContext
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
 
-fun Application.configureDb() {
-    val url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/univents"
-    val user = System.getenv("DB_USER") ?: "postgres"
-    val pass = System.getenv("DB_PASSWORD") ?: "postgres"
-
-    val cfg = HikariConfig().apply {
-        jdbcUrl = url
-        username = user
-        password = pass
-        maximumPoolSize = 5
+object Database {
+    private val dataSource by lazy {
+        val cfg = HikariConfig().apply {
+            jdbcUrl = System.getenv("DB_URL") ?: "jdbc:postgresql://127.0.0.1:5432/univents"
+            username = System.getenv("DB_USER") ?: "postgres"
+            password = System.getenv("DB_PASSWORD") ?: "postgres"
+            maximumPoolSize = 10
+        }
+        HikariDataSource(cfg)
     }
-    val ds = HikariDataSource(cfg)
-    Flyway.configure().dataSource(ds).locations("classpath:db/migration").load().migrate()
-    Database.connect(ds)
+
+    val dsl: DSLContext by lazy {
+        DSL.using(dataSource, SQLDialect.POSTGRES)
+    }
 }
+

@@ -1,12 +1,16 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        mavenCentral()
         google()
+        mavenCentral()
     }
 }
-
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS) // или FAIL_ON_PROJECT_REPOS
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 rootProject.name = "Univents"
-include(":app")
-include(":server")
-
+include(":app", ":server")

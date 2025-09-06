@@ -1,17 +1,15 @@
 import org.gradle.kotlin.dsl.version
 
-// build.gradle.kts (корень проекта)
 plugins {
-    // Для Android и JVM-проектов
-    id("com.android.application") version "8.12.2" apply false
-    id("org.jetbrains.kotlin.android") version "2.0.21" apply false
-    kotlin("jvm") version libs.versions.kotlin
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+// (для server модулей alias(libs.plugins.kotlin.jvm) здесь НЕ нужен, но если есть — только apply false)
 }
 
-repositories {
-    google()
-    mavenCentral()
-}
+
+
 allprojects {
     // если используешь Kotlin в подсборках
     plugins.withId("org.jetbrains.kotlin.jvm") {
